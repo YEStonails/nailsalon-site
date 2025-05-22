@@ -263,6 +263,29 @@
       font-size: 0.8em;
       margin-right: 0.5em;
     }
+    .time-slot {
+      display: inline-block;
+      padding: 0.5em 1em;
+      margin: 0.3em;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      cursor: pointer;
+      background-color: #f8f9fa;
+    }
+    .time-slot.selected {
+      background-color: var(--pink);
+      color: var(--dark-pink);
+      font-weight: bold;
+    }
+    .time-slot.booked {
+      background-color: #e9ecef;
+      color: #adb5bd;
+      cursor: not-allowed;
+      text-decoration: line-through;
+    }
+    .time-slots-container {
+      margin: 1em 0;
+    }
     footer {
       padding: 2em;
       text-align: center;
@@ -320,7 +343,7 @@
         </div>
         <div class="total-row">
           <span>Total Price:</span>
-          <span>AED <span id="totalPrice">0.00</span> (<span id="totalINR">₹0</span>)</span>
+          <span>AED <span id="totalPrice">0.00</span></span>
         </div>
       </div>
     </section>
@@ -343,10 +366,19 @@
             <input type="tel" id="phone" placeholder="Your Phone Number" required>
           </div>
           <div>
-            <label for="date">Preferred Date</label>
-            <input type="date" id="date" required>
+            <label for="bookingDate">Preferred Date</label>
+            <input type="date" id="bookingDate" required onchange="generateTimeSlots()">
           </div>
         </div>
+        
+        <div>
+          <label>Select Time Slot</label>
+          <div id="timeSlots" class="time-slots-container">
+            <p>Please select a date first</p>
+          </div>
+          <input type="hidden" id="selectedTime" required>
+        </div>
+        
         <label for="notes">Special Requests</label>
         <textarea id="notes" rows="3" placeholder="Any special requests or notes"></textarea>
         <button type="submit" class="btn">Confirm Booking</button>
@@ -440,7 +472,7 @@
         <table class="admin-table">
           <thead>
             <tr>
-              <th>Date</th>
+              <th>Date & Time</th>
               <th>Client</th>
               <th>Services</th>
               <th>Total</th>
@@ -475,7 +507,14 @@
 
     let cart = [];
     let bookings = [];
-    const AED_TO_INR = 22.5; // Conversion rate: 1 AED = 22.5 INR
+    let bookedTimeSlots = {}; // Format: { "YYYY-MM-DD": [{ start: "HH:MM", end: "HH:MM" }] }
+
+    // Business hours
+    const businessHours = {
+      start: 9, // 9 AM
+      end: 18,  // 6 PM
+      interval: 15 // 15-minute intervals
+    };
 
     // Initialize the page
     document.addEventListener('DOMContentLoaded', function() {
@@ -485,7 +524,7 @@
       
       // Set minimum date for booking to today
       const today = new Date().toISOString().split('T')[0];
-      document.getElementById('date').min = today;
+      document.getElementById('bookingDate').min = today;
     });
 
     // Populate services list
@@ -546,6 +585,11 @@
       if (service) {
         cart.push({...service});
         updateCart();
+        // Regenerate time slots if date is already selected
+        const selectedDate = document.getElementById('bookingDate').value;
+        if (selectedDate) {
+          generateTimeSlots();
+        }
       }
     }
 
@@ -553,6 +597,11 @@
     function removeFromCart(index) {
       cart.splice(index, 1);
       updateCart();
+      // Regenerate time slots if date is already selected
+      const selectedDate = document.getElementById('bookingDate').value;
+      if (selectedDate) {
+        generateTimeSlots();
+      }
     }
 
     // Update cart display
@@ -560,13 +609,11 @@
       const cartElement = document.getElementById('cart');
       const totalDuration = document.getElementById('totalDuration');
       const totalPrice = document.getElementById('totalPrice');
-      const totalINR = document.getElementById('totalINR');
       
       if (cart.length === 0) {
         cartElement.innerHTML = '<p class="cart-empty">Your selection is empty. Add services from the list.</p>';
         totalDuration.textContent = '0 mins';
         totalPrice.textContent = '0.00';
-        totalINR.textContent = '₹0';
         return;
       }
       
@@ -592,7 +639,94 @@
       
       totalDuration.textContent = `${duration} mins`;
       totalPrice.textContent = price.toFixed(2);
-      totalINR.textContent = `₹${Math.round(price * AED_TO_INR)}`;
+    }
+
+    // Generate available time slots based on selected date and services in cart
+    function generateTimeSlots() {
+      const selectedDate = document.getElementById('bookingDate').value;
+      const timeSlotsContainer = document.getElementById('timeSlots');
+      
+      if (!selectedDate) {
+        timeSlotsContainer.innerHTML = '<p>Please select a date first</p>';
+        return;
+      }
+      
+      if (cart.length === 0) {
+        timeSlotsContainer.innerHTML = '<p>Please add services to your selection first</p>';
+        return;
+      }
+      
+      // Calculate total duration needed for selected services
+      const totalDuration = cart.reduce((sum, service) => sum + service.duration, 0);
+      
+      // Generate all possible time slots for the day
+      const slots = [];
+      for (let hour = businessHours.start; hour < businessHours.end; hour++) {
+        for (let minute = 0; minute < 60; minute += businessHours.interval) {
+          const startTime = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+          
+          // Calculate end time based on total duration
+          const startMinutes = hour * 60 + minute;
+          const endMinutes = startMinutes + totalDuration;
+          
+          // Skip if appointment would end after business hours
+          if (endMinutes > businessHours.end * 60) continue;
+          
+          const endHour = Math.floor(endMinutes / 60);
+          const endMinute = endMinutes % 60;
+          const endTime = `${endHour.toString().padStart(2, '0')}:${endMinute.toString().padStart(2, '0')}`;
+          
+          slots.push({ start: startTime, end: endTime });
+        }
+      }
+      
+      // Filter out already booked slots
+      const bookedSlots = bookedTimeSlots[selectedDate] || [];
+      const availableSlots = slots.filter(slot => {
+        // Check if this slot overlaps with any booked slot
+        return !bookedSlots.some(bookedSlot => {
+          // Convert times to minutes for easier comparison
+          const slotStart = timeToMinutes(slot.start);
+          const slotEnd = timeToMinutes(slot.end);
+          const bookedStart = timeToMinutes(bookedSlot.start);
+          const bookedEnd = timeToMinutes(bookedSlot.end);
+          
+          // Check for overlap
+          return (slotStart < bookedEnd && slotEnd > bookedStart);
+        });
+      });
+      
+      // Display available time slots
+      timeSlotsContainer.innerHTML = '';
+      if (availableSlots.length === 0) {
+        timeSlotsContainer.innerHTML = '<p>No available time slots for this date. Please select another date.</p>';
+        return;
+      }
+      
+      availableSlots.forEach(slot => {
+        const slotElement = document.createElement('div');
+        slotElement.className = 'time-slot';
+        slotElement.textContent = `${slot.start} - ${slot.end}`;
+        slotElement.dataset.start = slot.start;
+        slotElement.dataset.end = slot.end;
+        
+        slotElement.addEventListener('click', function() {
+          // Remove selected class from all slots
+          document.querySelectorAll('.time-slot').forEach(el => el.classList.remove('selected'));
+          // Add selected class to this slot
+          this.classList.add('selected');
+          // Store selected time in hidden input
+          document.getElementById('selectedTime').value = JSON.stringify(slot);
+        });
+        
+        timeSlotsContainer.appendChild(slotElement);
+      });
+    }
+
+    // Helper function to convert time string to minutes
+    function timeToMinutes(timeStr) {
+      const [hours, minutes] = timeStr.split(':').map(Number);
+      return hours * 60 + minutes;
     }
 
     // Submit booking
@@ -606,11 +740,20 @@
         return;
       }
       
+      const selectedTimeValue = document.getElementById('selectedTime').value;
+      if (!selectedTimeValue) {
+        document.getElementById('confirmation').innerHTML = `
+          <div class="error-box">Please select a time slot for your appointment.</div>
+        `;
+        return;
+      }
+      
       const name = document.getElementById('name').value;
       const email = document.getElementById('email').value;
       const phone = document.getElementById('phone').value;
-      const date = document.getElementById('date').value;
+      const date = document.getElementById('bookingDate').value;
       const notes = document.getElementById('notes').value;
+      const selectedTime = JSON.parse(selectedTimeValue);
       
       const totalPrice = cart.reduce((sum, item) => sum + item.price, 0);
       const totalDuration = cart.reduce((sum, item) => sum + item.duration, 0);
@@ -621,6 +764,7 @@
         email,
         phone,
         date,
+        time: selectedTime,
         notes,
         services: [...cart],
         totalPrice,
@@ -628,18 +772,27 @@
         status: 'Pending'
       };
       
+      // Add booking to the list
       bookings.push(booking);
+      
+      // Block the time slot
+      if (!bookedTimeSlots[date]) {
+        bookedTimeSlots[date] = [];
+      }
+      bookedTimeSlots[date].push(selectedTime);
       
       document.getElementById('confirmation').innerHTML = `
         <div class="confirmation-box">
           <h3>Booking Confirmed!</h3>
-          <p>Thank you, ${name}. Your appointment has been scheduled for ${new Date(date).toLocaleDateString()}.</p>
+          <p>Thank you, ${name}. Your appointment has been scheduled for ${new Date(date).toLocaleDateString()} at ${selectedTime.start}.</p>
           <p>We'll send a confirmation to ${email}.</p>
         </div>
       `;
       
       // Reset form and cart
       document.getElementById('bookingForm').reset();
+      document.getElementById('selectedTime').value = '';
+      document.getElementById('timeSlots').innerHTML = '<p>Please select a date first</p>';
       cart = [];
       updateCart();
     }
@@ -773,7 +926,7 @@
       bookings.forEach(booking => {
         const row = document.createElement('tr');
         row.innerHTML = `
-          <td>${new Date(booking.date).toLocaleDateString()}</td>
+          <td>${new Date(booking.date).toLocaleDateString()}<br>${booking.time.start} - ${booking.time.end}</td>
           <td>${booking.name}<br><small>${booking.phone}</small></td>
           <td>${booking.services.map(s => s.name).join(', ')}</td>
           <td>AED ${booking.totalPrice.toFixed(2)}<br>${booking.totalDuration} mins</td>
@@ -792,9 +945,20 @@
       const booking = bookings.find(b => b.id === bookingId);
       if (booking) {
         booking.status = status;
+        
+        // If cancelled, free up the time slot
+        if (status === 'Cancelled') {
+          const date = booking.date;
+          if (bookedTimeSlots[date]) {
+            bookedTimeSlots[date] = bookedTimeSlots[date].filter(slot => 
+              !(slot.start === booking.time.start && slot.end === booking.time.end)
+            );
+          }
+        }
+        
         populateBookingsList();
       }
     }
   </script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'943c649455773e35',t:'MTc0NzkxNzc0MC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'943cb71cb186fd1f',t:'MTc0NzkyMTEyMS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
