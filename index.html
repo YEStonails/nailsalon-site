@@ -892,7 +892,6 @@
       // Check if we're on GitHub Pages
       if (hostname.includes('github.io')) {
         CONFIG.IS_PRODUCTION = true;
-        document.getElementById('envWarning').style.display = 'block';
         console.log('Running on GitHub Pages - Email functionality will be simulated');
       } 
       // Check if we're on a production domain
