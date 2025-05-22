@@ -802,17 +802,16 @@
   </footer>
 
   <script>
-    // Configuration
-    const CONFIG = {
-      // In a real production environment, these would be loaded from environment variables
-      // or a secure backend service, not hardcoded in the frontend
-      EMAILJS_PUBLIC_KEY: null, // Will be loaded from environment or server
-      EMAILJS_SERVICE_ID: null,
-      EMAILJS_TEMPLATE_ID: null,
-      IS_PRODUCTION: false, // Will be set based on environment detection
-      ADMIN_USERNAME: "admin", // In production, this would be stored securely
-      ADMIN_PASSWORD: "admin123" // In production, this would be hashed and stored securely
-    };
+   // Configuration
+const CONFIG = {
+  EMAILJS_PUBLIC_KEY: "X4BsAVt7IRjazbu8C",
+  EMAILJS_SERVICE_ID: "service_7ge36du",
+  EMAILJS_TEMPLATE_ID: "template_9ijq1yd",
+  IS_PRODUCTION: true, // Force production mode
+  ADMIN_USERNAME: "admin",
+  ADMIN_PASSWORD: "admin123"
+};
+
 
     // Sample data
     let services = [
