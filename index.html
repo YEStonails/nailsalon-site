@@ -5,6 +5,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Yes to Nails - Service Calculator</title>
+  <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
   <style>
     :root {
       --pink: #ffcce0;
@@ -358,6 +359,76 @@
       margin: 0.5em 0;
       text-align: center;
     }
+    .email-settings {
+      margin: 1em 0;
+      padding: 1em;
+      background-color: #f8f9fa;
+      border-radius: 8px;
+    }
+    .email-settings h4 {
+      margin-top: 0;
+      color: var(--dark-pink);
+    }
+    .email-toggle {
+      display: flex;
+      align-items: center;
+      margin: 1em 0;
+    }
+    .email-toggle label {
+      margin-left: 0.5em;
+    }
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 60px;
+      height: 34px;
+    }
+    .switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: #ccc;
+      transition: .4s;
+      border-radius: 34px;
+    }
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 26px;
+      width: 26px;
+      left: 4px;
+      bottom: 4px;
+      background-color: white;
+      transition: .4s;
+      border-radius: 50%;
+    }
+    input:checked + .slider {
+      background-color: var(--button-pink);
+    }
+    input:checked + .slider:before {
+      transform: translateX(26px);
+    }
+    .loading-spinner {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 3px solid rgba(255,255,255,.3);
+      border-radius: 50%;
+      border-top-color: #fff;
+      animation: spin 1s ease-in-out infinite;
+      margin-left: 10px;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
     footer {
       padding: 2em;
       text-align: center;
@@ -383,6 +454,15 @@
     .logo-svg {
       width: 80px;
       height: 80px;
+    }
+    .env-warning {
+      background-color: #fff3cd;
+      color: #856404;
+      padding: 1em;
+      border-radius: 4px;
+      margin: 1em 0;
+      text-align: center;
+      display: none;
     }
   </style>
 </head>
@@ -421,6 +501,9 @@
     </section>
     <section style="grid-column: span 2;">
       <h2>Book Your Appointment</h2>
+      <div id="envWarning" class="env-warning">
+        <strong>Note:</strong> Email functionality requires server-side configuration. In this GitHub Pages deployment, emails will be simulated but not actually sent.
+      </div>
       <form id="bookingForm" onsubmit="submitBooking(event)">
         <div class="form-row">
           <div>
@@ -453,7 +536,7 @@
         
         <label for="notes">Special Requests</label>
         <textarea id="notes" rows="3" placeholder="Any special requests or notes"></textarea>
-        <button type="submit" class="btn">Confirm Booking</button>
+        <button type="submit" class="btn" id="bookingSubmitBtn">Confirm Booking</button>
       </form>
       <div id="confirmation"></div>
     </section>
@@ -569,6 +652,7 @@
           <div class="tab-buttons">
             <button class="tab-button active" onclick="openTab(event, 'hoursTab')">Business Hours</button>
             <button class="tab-button" onclick="openTab(event, 'logoTab')">Company Logo</button>
+            <button class="tab-button" onclick="openTab(event, 'emailTab')">Email Settings</button>
           </div>
           
           <div id="hoursTab" class="tab-panel active">
@@ -659,6 +743,53 @@
             </div>
             <div id="logoMessage"></div>
           </div>
+          
+          <div id="emailTab" class="tab-panel">
+            <h4>Email Notification Settings</h4>
+            <div class="email-settings">
+              <div class="env-warning">
+                <strong>Note:</strong> For production use, you'll need to set up a server-side component to handle emails securely.
+              </div>
+              <div class="email-toggle">
+                <label class="switch">
+                  <input type="checkbox" id="customerEmailToggle" checked>
+                  <span class="slider"></span>
+                </label>
+                <label for="customerEmailToggle">Send confirmation emails to customers</label>
+              </div>
+              
+              <div class="email-toggle">
+                <label class="switch">
+                  <input type="checkbox" id="adminEmailToggle" checked>
+                  <span class="slider"></span>
+                </label>
+                <label for="adminEmailToggle">Send notification emails to admin</label>
+              </div>
+              
+              <div class="form-row">
+                <div>
+                  <label for="adminEmail">Admin Email Address</label>
+                  <input type="email" id="adminEmail" placeholder="Admin email for notifications">
+                </div>
+              </div>
+              
+              <button class="btn" onclick="saveEmailSettings()">Save Email Settings</button>
+              <div id="emailSettingsMessage"></div>
+            </div>
+            
+            <div class="email-settings">
+              <h4>Test Email Functionality</h4>
+              <p>Send a test email to verify your email settings are working correctly.</p>
+              <div class="form-row">
+                <div>
+                  <label for="testEmail">Email Address</label>
+                  <input type="email" id="testEmail" placeholder="Enter email for test">
+                </div>
+              </div>
+              <button class="btn" onclick="sendTestEmail()">Send Test Email</button>
+              <div id="testEmailMessage"></div>
+            </div>
+          </div>
         </div>
       </div>
     </section>
@@ -669,6 +800,18 @@
   </footer>
 
   <script>
+    // Configuration
+    const CONFIG = {
+      // In a real production environment, these would be loaded from environment variables
+      // or a secure backend service, not hardcoded in the frontend
+      EMAILJS_PUBLIC_KEY: null, // Will be loaded from environment or server
+      EMAILJS_SERVICE_ID: null,
+      EMAILJS_TEMPLATE_ID: null,
+      IS_PRODUCTION: false, // Will be set based on environment detection
+      ADMIN_USERNAME: "admin", // In production, this would be stored securely
+      ADMIN_PASSWORD: "admin123" // In production, this would be hashed and stored securely
+    };
+
     // Sample data
     let services = [
       { id: 1, name: "Classic Manicure", category: "Manicure", price: 60, duration: 30, description: "Nail shaping, cuticle care, and polish" },
@@ -701,8 +844,18 @@
       }
     };
 
+    // Email settings
+    let emailSettings = {
+      sendToCustomers: true,
+      sendToAdmin: true,
+      adminEmail: "admin@yestonails.com"
+    };
+
     // Initialize the page
     document.addEventListener('DOMContentLoaded', function() {
+      // Check if we're in a production environment
+      detectEnvironment();
+      
       // Load data from localStorage if available
       loadDataFromStorage();
       
@@ -730,44 +883,121 @@
       });
     });
 
+    // Detect environment (GitHub Pages, localhost, etc.)
+    function detectEnvironment() {
+      const hostname = window.location.hostname;
+      
+      // Check if we're on GitHub Pages
+      if (hostname.includes('github.io')) {
+        CONFIG.IS_PRODUCTION = true;
+        document.getElementById('envWarning').style.display = 'block';
+        console.log('Running on GitHub Pages - Email functionality will be simulated');
+      } 
+      // Check if we're on a production domain
+      else if (!hostname.includes('localhost') && !hostname.includes('127.0.0.1')) {
+        CONFIG.IS_PRODUCTION = true;
+        
+        // In a real app, you would load these from environment variables
+        // or fetch them securely from your backend
+        loadEmailConfig();
+      }
+      // Local development
+      else {
+        console.log('Running in development mode');
+        // For development testing, you might want to use test credentials
+        // but never commit these to your repository
+        loadEmailConfig();
+      }
+    }
+
+    // Load email configuration (in a real app, this would be from environment variables or backend)
+    function loadEmailConfig() {
+      // This is a placeholder for how you would load these securely
+      // In a real production app, you would NEVER expose these in client-side code
+      
+      // Option 1: Load from environment variables (requires server-side rendering)
+      // CONFIG.EMAILJS_PUBLIC_KEY = process.env.EMAILJS_PUBLIC_KEY;
+      // CONFIG.EMAILJS_SERVICE_ID = process.env.EMAILJS_SERVICE_ID;
+      // CONFIG.EMAILJS_TEMPLATE_ID = process.env.EMAILJS_TEMPLATE_ID;
+      
+      // Option 2: Load from a secure API endpoint
+      // fetch('/api/config/email')
+      //   .then(response => response.json())
+      //   .then(data => {
+      //     CONFIG.EMAILJS_PUBLIC_KEY = data.publicKey;
+      //     CONFIG.EMAILJS_SERVICE_ID = data.serviceId;
+      //     CONFIG.EMAILJS_TEMPLATE_ID = data.templateId;
+      //     initializeEmailJS();
+      //   });
+      
+      // For this demo, we'll use the values provided, but with a warning
+      CONFIG.EMAILJS_PUBLIC_KEY = "X4BsAVt7IRjazbu8C";
+      CONFIG.EMAILJS_SERVICE_ID = "service_7ge36du";
+      CONFIG.EMAILJS_TEMPLATE_ID = "template_9ijq1yd";
+      
+      // Initialize EmailJS if we have the config
+      if (CONFIG.EMAILJS_PUBLIC_KEY) {
+        initializeEmailJS();
+      }
+    }
+
+    // Initialize EmailJS
+    function initializeEmailJS() {
+      if (CONFIG.EMAILJS_PUBLIC_KEY) {
+        emailjs.init(CONFIG.EMAILJS_PUBLIC_KEY);
+      }
+    }
+
     // Load data from localStorage
     function loadDataFromStorage() {
+      // Use a prefix for all storage keys to avoid conflicts
+      const prefix = 'yestonails_';
+      
       // Load services
-      const savedServices = localStorage.getItem('nailServices');
+      const savedServices = localStorage.getItem(`${prefix}services`);
       if (savedServices) {
         services = JSON.parse(savedServices);
       }
       
       // Load bookings
-      const savedBookings = localStorage.getItem('nailBookings');
+      const savedBookings = localStorage.getItem(`${prefix}bookings`);
       if (savedBookings) {
         bookings = JSON.parse(savedBookings);
       }
       
       // Load booked time slots
-      const savedTimeSlots = localStorage.getItem('nailBookedTimeSlots');
+      const savedTimeSlots = localStorage.getItem(`${prefix}bookedTimeSlots`);
       if (savedTimeSlots) {
         bookedTimeSlots = JSON.parse(savedTimeSlots);
       }
       
       // Load business hours
-      const savedBusinessHours = localStorage.getItem('nailBusinessHours');
+      const savedBusinessHours = localStorage.getItem(`${prefix}businessHours`);
       if (savedBusinessHours) {
         businessHours = JSON.parse(savedBusinessHours);
+      }
+      
+      // Load email settings
+      const savedEmailSettings = localStorage.getItem(`${prefix}emailSettings`);
+      if (savedEmailSettings) {
+        emailSettings = JSON.parse(savedEmailSettings);
       }
     }
 
     // Save data to localStorage
     function saveDataToStorage() {
-      localStorage.setItem('nailServices', JSON.stringify(services));
-      localStorage.setItem('nailBookings', JSON.stringify(bookings));
-      localStorage.setItem('nailBookedTimeSlots', JSON.stringify(bookedTimeSlots));
-      localStorage.setItem('nailBusinessHours', JSON.stringify(businessHours));
+      const prefix = 'yestonails_';
+      
+      localStorage.setItem(`${prefix}services`, JSON.stringify(services));
+      localStorage.setItem(`${prefix}bookings`, JSON.stringify(bookings));
+      localStorage.setItem(`${prefix}bookedTimeSlots`, JSON.stringify(bookedTimeSlots));
+      localStorage.setItem(`${prefix}businessHours`, JSON.stringify(businessHours));
+      localStorage.setItem(`${prefix}emailSettings`, JSON.stringify(emailSettings));
     }
 
     // Display logo from localStorage
     function displayLogo() {
-      const logoData = localStorage.getItem('nailLogo');
+      const logoData = localStorage.getItem('yestonails_logo');
       const logoContainer = document.getElementById('logoContainer');
       
       if (logoData) {
@@ -1019,6 +1249,58 @@
       return hours * 60 + minutes;
     }
 
+    // Format date for display
+    function formatDate(dateString) {
+      const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+      return new Date(dateString).toLocaleDateString(undefined, options);
+    }
+
+    // Send email using EmailJS or API
+    function sendEmail(templateParams, onSuccess, onError) {
+      // Check if we're in production with email configured
+      if (CONFIG.IS_PRODUCTION && CONFIG.EMAILJS_PUBLIC_KEY) {
+        // Use EmailJS in production if configured
+        emailjs.send(CONFIG.EMAILJS_SERVICE_ID, CONFIG.EMAILJS_TEMPLATE_ID, templateParams)
+          .then(function(response) {
+            console.log('Email sent successfully:', response);
+            if (onSuccess) onSuccess(response);
+          }, function(error) {
+            console.error('Email failed to send:', error);
+            if (onError) onError(error);
+          });
+      } 
+      // For GitHub Pages or when email isn't configured
+      else if (CONFIG.IS_PRODUCTION) {
+        // Simulate email sending for GitHub Pages
+        console.log('Email would be sent with params:', templateParams);
+        setTimeout(() => {
+          if (onSuccess) onSuccess({status: 200, text: 'Email simulated (GitHub Pages)'});
+        }, 1000);
+      }
+      // For local development
+      else {
+        // In local development, we can either:
+        // 1. Use EmailJS if configured
+        if (CONFIG.EMAILJS_PUBLIC_KEY) {
+          emailjs.send(CONFIG.EMAILJS_SERVICE_ID, CONFIG.EMAILJS_TEMPLATE_ID, templateParams)
+            .then(function(response) {
+              console.log('Email sent successfully:', response);
+              if (onSuccess) onSuccess(response);
+            }, function(error) {
+              console.error('Email failed to send:', error);
+              if (onError) onError(error);
+            });
+        } 
+        // 2. Or simulate email sending
+        else {
+          console.log('Email would be sent with params:', templateParams);
+          setTimeout(() => {
+            if (onSuccess) onSuccess({status: 200, text: 'Email simulated (development)'});
+          }, 1000);
+        }
+      }
+    }
+
     // Submit booking
     function submitBooking(event) {
       event.preventDefault();
@@ -1037,6 +1319,12 @@
         `;
         return;
       }
+      
+      // Show loading state
+      const submitBtn = document.getElementById('bookingSubmitBtn');
+      const originalBtnText = submitBtn.innerHTML;
+      submitBtn.innerHTML = 'Processing... <span class="loading-spinner"></span>';
+      submitBtn.disabled = true;
       
       const name = document.getElementById('name').value;
       const email = document.getElementById('email').value;
@@ -1074,20 +1362,69 @@
       // Save data to localStorage
       saveDataToStorage();
       
-      document.getElementById('confirmation').innerHTML = `
-        <div class="confirmation-box">
-          <h3>Booking Confirmed!</h3>
-          <p>Thank you, ${name}. Your appointment has been scheduled for ${new Date(date).toLocaleDateString()} at ${selectedTime.start}.</p>
-          <p>We'll send a confirmation to ${email}.</p>
-        </div>
-      `;
+      // Prepare services list for email
+      const servicesList = booking.services.map(s => `${s.name} (${s.duration} mins) - AED ${s.price.toFixed(2)}`).join('<br>');
       
-      // Reset form and cart
-      document.getElementById('bookingForm').reset();
-      document.getElementById('selectedTime').value = '';
-      document.getElementById('timeSlots').innerHTML = '<p>Please select a date first</p>';
-      cart = [];
-      updateCart();
+      // Send confirmation email to customer if enabled
+      if (emailSettings.sendToCustomers) {
+        const customerParams = {
+          to_name: name,
+          to_email: email,
+          booking_date: formatDate(date),
+          booking_time: `${selectedTime.start} - ${selectedTime.end}`,
+          services_list: servicesList,
+          total_price: `AED ${totalPrice.toFixed(2)}`,
+          total_duration: `${totalDuration} mins`,
+          booking_id: booking.id,
+          notes: notes || 'None'
+        };
+        
+        sendEmail(customerParams);
+      }
+      
+      // Send notification email to admin if enabled
+      if (emailSettings.sendToAdmin && emailSettings.adminEmail) {
+        const adminParams = {
+          to_name: 'Admin',
+          to_email: emailSettings.adminEmail,
+          customer_name: name,
+          customer_email: email,
+          customer_phone: phone,
+          booking_date: formatDate(date),
+          booking_time: `${selectedTime.start} - ${selectedTime.end}`,
+          services_list: servicesList,
+          total_price: `AED ${totalPrice.toFixed(2)}`,
+          total_duration: `${totalDuration} mins`,
+          booking_id: booking.id,
+          notes: notes || 'None'
+        };
+        
+        sendEmail(adminParams);
+      }
+      
+      // Show confirmation and reset form after a short delay
+      setTimeout(() => {
+        document.getElementById('confirmation').innerHTML = `
+          <div class="confirmation-box">
+            <h3>Booking Confirmed!</h3>
+            <p>Thank you, ${name}. Your appointment has been scheduled for ${formatDate(date)} at ${selectedTime.start}.</p>
+            <p>We'll send a confirmation to ${email}.</p>
+            ${CONFIG.IS_PRODUCTION && !CONFIG.EMAILJS_PUBLIC_KEY ? 
+              '<p><small>Note: In this demo version, emails are simulated and not actually sent.</small></p>' : ''}
+          </div>
+        `;
+        
+        // Reset form and cart
+        document.getElementById('bookingForm').reset();
+        document.getElementById('selectedTime').value = '';
+        document.getElementById('timeSlots').innerHTML = '<p>Please select a date first</p>';
+        cart = [];
+        updateCart();
+        
+        // Reset button
+        submitBtn.innerHTML = originalBtnText;
+        submitBtn.disabled = false;
+      }, 1500);
     }
 
     // Admin Authentication
@@ -1096,12 +1433,14 @@
       const username = document.getElementById('adminUser').value;
       const password = document.getElementById('adminPass').value;
       
-      // Simple authentication (in a real app, this would be server-side)
-      if (username === 'admin' && password === 'admin123') {
+      // In a production environment, this would be a secure API call
+      // that would hash the password and verify against a database
+      if (username === CONFIG.ADMIN_USERNAME && password === CONFIG.ADMIN_PASSWORD) {
         document.getElementById('adminLoginSection').classList.add('hidden');
         document.getElementById('adminPanel').classList.remove('hidden');
         showAdminDashboard();
         loadBusinessHoursToForm();
+        loadEmailSettings();
       } else {
         document.getElementById('adminLoginMessage').innerHTML = `
           <div class="error-box">Invalid username or password.</div>
@@ -1158,6 +1497,7 @@
       document.getElementById('bookingManager').classList.add('hidden');
       document.getElementById('businessSettings').classList.remove('hidden');
       loadBusinessHoursToForm();
+      loadEmailSettings();
     }
 
     // Open tab in business settings
@@ -1193,6 +1533,13 @@
       }
     }
 
+    // Load email settings to form
+    function loadEmailSettings() {
+      document.getElementById('customerEmailToggle').checked = emailSettings.sendToCustomers;
+      document.getElementById('adminEmailToggle').checked = emailSettings.sendToAdmin;
+      document.getElementById('adminEmail').value = emailSettings.adminEmail || '';
+    }
+
     // Save business hours
     function saveBusinessHours(event) {
       event.preventDefault();
@@ -1209,7 +1556,7 @@
       });
       
       // Save to localStorage
-      localStorage.setItem('nailBusinessHours', JSON.stringify(businessHours));
+      saveDataToStorage();
       
       document.getElementById('hoursMessage').innerHTML = `
         <div class="success-message">Business hours saved successfully!</div>
@@ -1218,6 +1565,70 @@
       setTimeout(() => {
         document.getElementById('hoursMessage').innerHTML = '';
       }, 3000);
+    }
+
+    // Save email settings
+    function saveEmailSettings() {
+      emailSettings.sendToCustomers = document.getElementById('customerEmailToggle').checked;
+      emailSettings.sendToAdmin = document.getElementById('adminEmailToggle').checked;
+      emailSettings.adminEmail = document.getElementById('adminEmail').value;
+      
+      // Save to localStorage
+      saveDataToStorage();
+      
+      document.getElementById('emailSettingsMessage').innerHTML = `
+        <div class="success-message">Email settings saved successfully!</div>
+      `;
+      
+      setTimeout(() => {
+        document.getElementById('emailSettingsMessage').innerHTML = '';
+      }, 3000);
+    }
+
+    // Send test email
+    function sendTestEmail() {
+      const testEmail = document.getElementById('testEmail').value;
+      
+      if (!testEmail) {
+        document.getElementById('testEmailMessage').innerHTML = `
+          <div class="error-box">Please enter an email address for testing.</div>
+        `;
+        return;
+      }
+      
+      document.getElementById('testEmailMessage').innerHTML = `
+        <div class="success-message">Sending test email... <span class="loading-spinner"></span></div>
+      `;
+      
+      const testParams = {
+        to_name: 'Test User',
+        to_email: testEmail,
+        booking_date: 'Test Date',
+        booking_time: 'Test Time',
+        services_list: 'Test Service 1<br>Test Service 2',
+        total_price: 'AED 100.00',
+        total_duration: '60 mins',
+        booking_id: 'TEST-123',
+        notes: 'This is a test email to verify email functionality.'
+      };
+      
+      sendEmail(testParams, 
+        function(response) {
+          document.getElementById('testEmailMessage').innerHTML = `
+            <div class="success-message">Test email sent successfully!</div>
+            ${CONFIG.IS_PRODUCTION && !CONFIG.EMAILJS_PUBLIC_KEY ? 
+              '<p><small>Note: In this demo version, emails are simulated and not actually sent.</small></p>' : ''}
+          `;
+          setTimeout(() => {
+            document.getElementById('testEmailMessage').innerHTML = '';
+          }, 3000);
+        },
+        function(error) {
+          document.getElementById('testEmailMessage').innerHTML = `
+            <div class="error-box">Failed to send test email. Error: ${error.text}</div>
+          `;
+        }
+      );
     }
 
     // Save logo
@@ -1235,7 +1646,7 @@
       
       reader.onload = function(e) {
         const logoData = e.target.result;
-        localStorage.setItem('nailLogo', logoData);
+        localStorage.setItem('yestonails_logo', logoData);
         
         document.getElementById('logoMessage').innerHTML = `
           <div class="success-message">Logo saved successfully!</div>
@@ -1331,8 +1742,8 @@
       bookings.forEach(booking => {
         const row = document.createElement('tr');
         row.innerHTML = `
-          <td>${new Date(booking.date).toLocaleDateString()}<br>${booking.time.start} - ${booking.time.end}</td>
-          <td>${booking.name}<br><small>${booking.phone}</small></td>
+          <td>${formatDate(booking.date)}<br>${booking.time.start} - ${booking.time.end}</td>
+          <td>${booking.name}<br><small>${booking.phone}</small><br><small>${booking.email}</small></td>
           <td>${booking.services.map(s => s.name).join(', ')}</td>
           <td>AED ${booking.totalPrice.toFixed(2)}<br>${booking.totalDuration} mins</td>
           <td>${booking.status}</td>
@@ -1349,6 +1760,7 @@
     function updateBookingStatus(bookingId, status) {
       const booking = bookings.find(b => b.id === bookingId);
       if (booking) {
+        const previousStatus = booking.status;
         booking.status = status;
         
         // If cancelled, free up the time slot
@@ -1364,9 +1776,25 @@
         // Save to localStorage
         saveDataToStorage();
         
+        // Send status update email if enabled and status changed
+        if (previousStatus !== status && emailSettings.sendToCustomers) {
+          const statusParams = {
+            to_name: booking.name,
+            to_email: booking.email,
+            booking_date: formatDate(booking.date),
+            booking_time: `${booking.time.start} - ${booking.time.end}`,
+            booking_status: status,
+            booking_id: booking.id,
+            services_list: booking.services.map(s => `${s.name} (${s.duration} mins) - AED ${s.price.toFixed(2)}`).join('<br>'),
+            total_price: `AED ${booking.totalPrice.toFixed(2)}`
+          };
+          
+          sendEmail(statusParams);
+        }
+        
         populateBookingsList();
       }
     }
   </script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'943cdf7a1038ce15',t:'MTc0NzkyMjc3NC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'943e15fa939baf7b',t:'MTc0NzkzNTQ5Mi4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
