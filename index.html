@@ -976,19 +976,19 @@ function displayLogo() {
   const logoContainer = document.getElementById('logoContainer');
 
   if (logoData) {
-    // If logo is stored in localStorage, use it
     logoContainer.innerHTML = `<img src="${logoData}" alt="Yes to Nails Logo" style="max-height: 80px;">`;
   } else {
-    // If no logo in localStorage, show default image
+    // Use your public hosted image
     logoContainer.innerHTML = `
       <div style="text-align: center;">
-        <img src="/mnt/data/6c9bd214-0118-4ddb-8594-d51186aa84b7.png" 
+        <img src="https://i.ibb.co/S4Fpz82j/f05e25c8-c78a-401d-ac52-cd2f4d7423c1.png" 
              alt="Yes to Nails Logo" 
              style="max-width: 200px; height: auto;" />
       </div>
     `;
   }
 }
+
 
  // Populate services list
     function populateServices(category = 'all') {
