@@ -482,6 +482,17 @@
 <a onclick="showUserPanel()">Services</a> | 
     <a onclick="showAdminLogin()">Admin</a>
 </nav>
+    <section style="max-width: 500px; margin: 2em auto;">
+  <h2>🛠️ Setup Google Sheets</h2>
+  <button onclick="initializeSheets()">Initialize Sheets</button>
+  <p id="sheetInitResult"></p>
+
+  <h2 style="margin-top: 2em;">🔐 Admin Login</h2>
+  <input type="text" id="adminUser" placeholder="Username" style="width: 100%; padding: 0.6em; margin: 0.5em 0;" />
+  <input type="password" id="adminPass" placeholder="Password" style="width: 100%; padding: 0.6em; margin: 0.5em 0;" />
+  <button onclick="adminLogin()" style="width: 100%; padding: 0.6em;">Login</button>
+  <p id="adminLoginResult"></p>
+</section>
 <main id="userPanel">
 <section id="services">
 <h2>Browse Services</h2>
