@@ -978,14 +978,15 @@
       if (logoData) {
         logoContainer.innerHTML = `<img src="${logoData}" alt="Yes to Nails Logo" style="max-height: 80px;">`;
       } else {
-        // Default SVG logo
-        logoContainer.innerHTML = `
-          <svg class="logo-svg" viewBox="0 0 100 100" xmlns="<a href="https://ibb.co/jPnFS2dN"><img src="https://i.ibb.co/jPnFS2dN/f05e25c8-c78a-401d-ac52-cd2f4d7423c1.png" alt="f05e25c8-c78a-401d-ac52-cd2f4d7423c1" border="0"></a>">
-            <circle cx="50" cy="50" r="45" fill="#fff" />
-            <path d="M30,40 Q50,20 70,40 Q90,60 70,80 Q50,100 30,80 Q10,60 30,40 Z" fill="#ff99cc" />
-            <text x="50" y="55" font-family="Arial" font-size="12" font-weight="bold" text-anchor="middle" fill="#fff"></text>
-            <text x="50" y="70" font-family="Arial" font-size="16" font-weight="bold" text-anchor="middle" fill="#fff"></text>
-          </svg>
+       // PNG logo in center
+logoContainer.innerHTML = `
+  <div style="text-align: center;">
+    <img src="https://i.ibb.co/jPnFS2dN/f05e25c8-c78a-401d-ac52-cd2f4d7423c1.png" 
+         alt="Yes to Nails Logo" 
+         style="max-width: 150px; height: auto;" />
+  </div>
+`;
+
         `;
       }
     }
