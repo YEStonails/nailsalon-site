@@ -1831,5 +1831,83 @@ const CONFIG = {
       }
     }
   </script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9442718dc5f340d2',t:'MTc0Nzk4MTE4Ni4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9442718dc5f340d2',t:'MTc0Nzk4MTE4Ni4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><!-- 📌 PASTE THIS JUST BEFORE </body> -->
+<script>
+  const INIT_SHEET_URL = 'https://script.google.com/macros/s/AKfycbz0cFlyWEWmFxAZhuSAYsTzxBGFCANzrIXNT4608gU6R2J-TYT1QpvmfdXNU3ZqhvLPFg/exec';
+
+  function initializeSheets() {
+    const payloads = [
+      {
+        sheet: 'Services',
+        headers: ['ID', 'Name', 'Category', 'Price', 'Duration', 'Description'],
+        rows: []
+      },
+      {
+        sheet: 'BusinessHours',
+        headers: ['day', 'open', 'close', 'closed'],
+        rows: [
+          ['monday', '09:00', '18:00', false],
+          ['tuesday', '09:00', '18:00', false],
+          ['wednesday', '09:00', '18:00', false],
+          ['thursday', '09:00', '18:00', false],
+          ['friday', '09:00', '18:00', false],
+          ['saturday', '09:00', '18:00', false],
+          ['sunday', '09:00', '18:00', true]
+        ]
+      },
+      {
+        sheet: 'EmailSettings',
+        headers: ['sendToCustomers', 'sendToAdmin', 'adminEmail'],
+        rows: [[true, true, 'nailsk2022@gmail.com']]
+      },
+      {
+        sheet: 'Admin',
+        headers: ['username', 'password'],
+        rows: [['admin', 'admin123']]
+      }
+    ];
+
+    let done = 0;
+    document.getElementById('sheetInitResult').textContent = 'Initializing...';
+
+    payloads.forEach(sheetData => {
+      fetch(`${INIT_SHEET_URL}?sheet=${sheetData.sheet}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify([sheetData.headers, ...sheetData.rows])
+      })
+      .then(res => res.text())
+      .then(() => {
+        done++;
+        if (done === payloads.length) {
+          document.getElementById('sheetInitResult').textContent = '✅ All tabs initialized!';
+        }
+      })
+      .catch(err => {
+        document.getElementById('sheetInitResult').textContent = `❌ Error: ${err.message}`;
+      });
+    });
+  }
+
+  function adminLogin() {
+    const username = document.getElementById('adminUser').value;
+    const password = document.getElementById('adminPass').value;
+
+    fetch(`${INIT_SHEET_URL}?sheet=Admin`)
+      .then(res => res.json())
+      .then(data => {
+        const match = data.find(row => row.username === username && row.password === password);
+        const message = match ? "✅ Login successful!" : "❌ Invalid credentials.";
+        document.getElementById('adminLoginResult').textContent = message;
+      })
+      .catch(err => {
+        document.getElementById('adminLoginResult').textContent = "❌ Login error.";
+        console.error(err);
+      });
+  }
+</script>
+<!-- ✅ Then leave this part as it is -->
+</body>
+</html>
+</body>
 </html>
