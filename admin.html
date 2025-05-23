@@ -1,45 +1,92 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8"/>
-<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-<title>Yes to Nails - Service Calculator</title>
-<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js" type="text/javascript"></script>
-<style>
-/* original styles remain unchanged */
-</style>
+  <meta charset="utf-8"/>
+  <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+  <title>Yes to Nails - Service Calculator</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #fff0f5;
+      color: #333;
+      margin: 0;
+      padding: 0;
+    }
+    header, nav, footer {
+      text-align: center;
+      padding: 1em;
+    }
+    nav {
+      background-color: #fff;
+      border-bottom: 1px solid #ccc;
+    }
+    nav a {
+      margin: 0 1em;
+      text-decoration: none;
+      color: #d63384;
+      font-weight: bold;
+    }
+    section {
+      max-width: 500px;
+      margin: 2em auto;
+      background: #fff;
+      padding: 2em;
+      border-radius: 12px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.05);
+    }
+    h1, h2 {
+      color: #d63384;
+    }
+    input, button {
+      width: 100%;
+      padding: 0.6em;
+      margin: 0.5em 0;
+      font-size: 1em;
+    }
+    button {
+      background-color: #ff99cc;
+      color: #fff;
+      border: none;
+      cursor: pointer;
+      font-weight: bold;
+    }
+    button:hover {
+      background-color: #d63384;
+    }
+    #sheetInitResult, #adminLoginResult {
+      font-weight: bold;
+      margin-top: 1em;
+      text-align: center;
+    }
+  </style>
 </head>
 <body>
+
 <header>
-<div id="logoContainer">
-<!-- Logo will be inserted here -->
-</div>
-<h1>Yes to Nails - Service Calculator</h1>
+  <h1>Yes to Nails - Admin Panel</h1>
 </header>
+
 <nav>
-<a onclick="showUserPanel()">Services</a> | 
-<a onclick="showAdminLogin()">Admin</a>
+  <a href="#">Services</a> |
+  <a href="#">Admin</a>
 </nav>
 
-<!-- ✅ Admin and Sheet Setup Block -->
-<section style="max-width: 500px; margin: 2em auto;">
-  <h2>🛠️ Setup Google Sheets</h2>
+<section>
+  <h2>🛠️ Initialize Google Sheets</h2>
   <button onclick="initializeSheets()">Initialize Sheets</button>
   <p id="sheetInitResult"></p>
 
-  <h2 style="margin-top: 2em;">🔐 Admin Login</h2>
-  <input type="text" id="adminUser" placeholder="Username" style="width: 100%; padding: 0.6em; margin: 0.5em 0;" />
-  <input type="password" id="adminPass" placeholder="Password" style="width: 100%; padding: 0.6em; margin: 0.5em 0;" />
-  <button onclick="adminLogin()" style="width: 100%; padding: 0.6em;">Login</button>
+  <h2>🔐 Admin Login</h2>
+  <input type="text" id="adminUser" placeholder="Username" />
+  <input type="password" id="adminPass" placeholder="Password" />
+  <button onclick="adminLogin()">Login</button>
   <p id="adminLoginResult"></p>
 </section>
 
-<main id="userPanel">
-<!-- remaining content stays unchanged -->
-</main>
 <footer>
-<p>© 2023 Yes to Nails. All rights reserved.</p>
+  <p>© 2025 Yes to Nails. All rights reserved.</p>
 </footer>
+
 <script>
   const INIT_SHEET_URL = 'https://script.google.com/macros/s/AKfycbz0cFlyWEWmFxAZhuSAYsTzxBGFCANzrIXNT4608gU6R2J-TYT1QpvmfdXNU3ZqhvLPFg/exec';
 
@@ -75,8 +122,8 @@
       }
     ];
 
-    let done = 0;
     document.getElementById('sheetInitResult').textContent = 'Initializing...';
+    let done = 0;
 
     payloads.forEach(sheetData => {
       fetch(`${INIT_SHEET_URL}?sheet=${sheetData.sheet}`, {
@@ -105,14 +152,15 @@
       .then(res => res.json())
       .then(data => {
         const match = data.find(row => row.username === username && row.password === password);
-        const message = match ? "✅ Login successful!" : "❌ Invalid credentials.";
+        const message = match ? '✅ Login successful!' : '❌ Invalid credentials.';
         document.getElementById('adminLoginResult').textContent = message;
       })
       .catch(err => {
-        document.getElementById('adminLoginResult').textContent = "❌ Login error.";
+        document.getElementById('adminLoginResult').textContent = '❌ Login error.';
         console.error(err);
       });
   }
 </script>
+
 </body>
 </html>
