@@ -471,31 +471,20 @@
     }
   </style>
     <style>
-  h1.sparkle-heading {
-    font-size: 2.5em;
-    color: #d63384;
-    position: relative;
-    display: inline-block;
+  .glitter-text {
+    font-size: 2em;
+    font-weight: bold;
+    background: linear-gradient(90deg, #ff6ec4, #7873f5, #f9d423);
+    background-size: 200% auto;
+    color: transparent;
+    background-clip: text;
+    -webkit-background-clip: text;
+    animation: shimmer 3s linear infinite;
   }
 
-  h1.sparkle-heading::after {
-    content: "✨";
-    position: absolute;
-    top: -10px;
-    right: -25px;
-    animation: sparkle 1.5s infinite ease-in-out;
-    font-size: 1.2em;
-  }
-
-  @keyframes sparkle {
-    0%, 100% {
-      opacity: 0;
-      transform: scale(1);
-    }
-    50% {
-      opacity: 1;
-      transform: scale(1.5) rotate(20deg);
-    }
+  @keyframes shimmer {
+    0% { background-position: 0% center; }
+    100% { background-position: 200% center; }
   }
 </style>
 
@@ -505,7 +494,7 @@
 <div id="logoContainer">
 <!-- Logo will be inserted here -->
 </div>
-<h1 class="sparkle-heading">Yes to Nails - The Art of Saying Yes to You</h1>
+<div class="glitter-text">YES to nails</div>
 </header>
 <nav>
 <a onclick="showUserPanel()">Services</a> | 
